@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>신호 기반 보행 경로 추천 앱</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #edf3ff;
+      color: #222;
+    }
+
+    .app {
+      max-width: 430px;
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #f8fbff;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .top h1 {
+      font-size: 22px;
+      margin: 0;
+      color: #1d5cff;
+    }
+
+    .badge {
+      background: #e7efff;
+      color: #1d5cff;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .search-card {
+      background: white;
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+      margin-bottom: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+
+    .input-row:last-child {
+      border-bottom: none;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .green { background: #22c55e; }
+    .red { background: #ef4444; }
+
+    .input-row input {
+      border: none;
+      outline: none;
+      width: 100%;
+      font-size: 14px;
+      background: transparent;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      padding: 13px;
+      border-radius: 14px;
+      background: #1d5cff;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      background: white;
+      border-radius: 13px;
+      padding: 10px 4px;
+      font-size: 13px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+    }
+
+    .tab strong {
+      color: #1d5cff;
+      font-size: 17px;
+      display: block;
+      margin-top: 3px;
+    }
+
+    .tab.active {
+      background: #eaf1ff;
+      border: 2px solid #1d5cff;
+      font-weight: bold;
+    }
+
+    .map {
+      height: 420px;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px),
+        linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+        #eef3f7;
+      background-size: 55px 55px;
+      border-radius: 22px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px #dbe4ef;
+      margin-bottom: 14px;
+    }
+
+    .road {
+      position: absolute;
+      background: #ffffff;
+      border: 2px solid #d7dee8;
+      border-radius: 30px;
+    }
+
+    .road.r1 {
+      width: 520px;
+      height: 48px;
+      left: -50px;
+      top: 190px;
+      transform: rotate(-28deg);
+    }
+
+    .road.r2 {
+      width: 420px;
+      height: 46px;
+      left: 40px;
+      top: 190px;
+      transform: rotate(55deg);
+    }
+
+    .road.r3 {
+      width: 330px;
+      height: 42px;
+      left: 40px;
+      top: 85px;
+      transform: rotate(5deg);
+    }
+
+    .route-line {
+      position: absolute;
+      width: 250px;
+      height: 170px;
+      left: 82px;
+      top: 170px;
+      border-left: 7px solid #1d5cff;
+      border-bottom: 7px solid #1d5cff;
+      border-radius: 0 0 0 20px;
+    }
+
+    .route-line::after {
+      content: "";
+      position: absolute;
+      width: 145px;
+      height: 7px;
+      background: #1d5cff;
+      left: 0;
+      bottom: -7px;
+      transform: rotate(-32deg);
+      transform-origin: left center;
+      border-radius: 8px;
+    }
+
+    .user {
+      position: absolute;
+      left: 70px;
+      bottom: 62px;
+      width: 44px;
+      height: 44px;
+      background: #1d5cff;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      box-shadow: 0 4px 12px rgba(29,92,255,0.4);
+      z-index: 5;
+    }
+
+    .destination {
+      position: absolute;
+      right: 70px;
+      top: 80px;
+      font-size: 38px;
+      z-index: 5;
+    }
+
+    .signal-pin {
+      position: absolute;
+      background: #222;
+      color: white;
+      border-radius: 13px;
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.35;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.22);
+      z-index: 6;
+    }
+
+    .signal-pin b {
+      color: #71ff9b;
+    }
+
+    .signal-light {
+      width: 18px;
+      height: 38px;
+      background: #333;
+      border-radius: 7px;
+      margin-top: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 4px;
+    }
+
+    .light {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #555;
+    }
+
+    .light.on {
+      background: #22c55e;
+    }
+
+    .pin1 { left: 92px; top: 120px; }
+    .pin2 { left: 190px; top: 190px; }
+    .pin3 { right: 45px; top: 225px; }
+
+    .bottom-card {
+      background: white;
+      border-radius: 20px;
+      padding: 15px;
+      box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
+    }
+
+    .route-summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .summary-box {
+      flex: 1;
+      background: #f5f7fb;
+      border-radius: 15px;
+      padding: 12px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .summary-box.recommend {
+      background: #eaf1ff;
+      border: 2px solid #1d5cff;
+    }
+
+    .summary-box strong {
+      display: block;
+      font-size: 24px;
+      color: #1d5cff;
+      margin-top: 5px;
+    }
+
+    .saving {
+      background: #eef4ff;
+      color: #1d5cff;
+      text-align: center;
+      border-radius: 14px;
+      padding: 12px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #444;
+    }
+
+    .detail-btn {
+      width: auto;
+      margin: 0;
+      padding: 8px 12px;
+      background: #f0f3f8;
+      color: #333;
+      font-size: 12px;
+    }
+
+    .feature-card {
+      background: white;
+      border-radius: 18px;
+      padding: 14px;
+      margin-top: 14px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.06);
+    }
+
+    .feature-card h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .feature {
+      border-radius: 15px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .f1 { background: #ecfdf3; border: 1px solid #b7ebcc; }
+    .f2 { background: #fff8e6; border: 1px solid #f1d48a; }
+    .f3 { background: #edf4ff; border: 1px solid #b8cff8; }
+    .f4 { background: #f6efff; border: 1px solid #d8b8ff; }
+
+    .feature b {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="top">
+      <h1>🚦 신호 길잡이</h1>
+      <div class="badge">보행자용</div>
+    </div>
+
+    <div class="search-card">
+      <div class="input-row">
+        <span class="dot green"></span>
+        <input type="text" value="현재 위치  한밭대학교" />
+      </div>
+      <div class="input-row">
+        <span class="dot red"></span>
+        <input type="text" value="도착지  대전역" />
+      </div>
+      <button onclick="startApp()">신호 기반 경로 추천하기</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">
+        추천 경로
+        <strong>18분</strong>
+      </div>
+      <div class="tab">
+        최단 거리
+        <strong>22분</strong>
+      </div>
+      <div class="tab">
+        최소 도보
+        <strong>20분</strong>
+      </div>
+    </div>
+
+    <div class="map">
+      <div class="road r1"></div>
+      <div class="road r2"></div>
+      <div class="road r3"></div>
+
+      <div class="route-line"></div>
+
+      <div class="user">🚶</div>
+      <div class="destination">📍</div>
+
+      <div class="signal-pin pin1">
+        <span id="pin1Text">다음 신호 방향<br><b>직진</b></span>
+        <div class="signal-light">
+          <div class="light"></div>
+          <div class="light on"></div>
+          <div class="light"></div>
+        </div>
+      </div>
+
+      <div class="signal-pin pin2">
+        <span id="pin2Text">25초 후<br><b>초록불</b><br>다음 신호 방향 ↑</span>
+        <div class="signal-light">
+          <div class="light"></div>
+          <div class="light on"></div>
+          <div class="light"></div>
+        </div>
+      </div>
+
+      <div class="signal-pin pin3">
+        <span id="pin3Text">35초 후<br><b>초록불</b><br>꺾은길 방향 →</span>
+        <div class="signal-light">
+          <div class="light"></div>
+          <div class="light on"></div>
+          <div class="light"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-card">
+      <div class="route-summary">
+        <div class="summary-box recommend">
+          추천 경로
+          <strong>18분</strong>
+          1.2km
+        </div>
+
+        <div class="summary-box">
+          최단거리 경로
+          <strong>22분</strong>
+          1.1km
+        </div>
+      </div>
+
+      <div class="saving" id="savingText">
+        대기 시간 4분 절약 🪽
+      </div>
+
+      <div class="info">
+        <span>🚶 횡단 2회 | 신호 대기 1회 포함</span>
+        <button class="detail-btn" onclick="toggleFeature()">상세 기능</button>
+      </div>
+    </div>
+
+    <div class="feature-card hidden" id="featureCard">
+      <h3>프로토타입 구성 요소</h3>
+
+      <div class="features">
+        <div class="feature f1">
+          <b>1. 신호 순서 안내</b>
+          다음 초록불 방향과 교차로 신호 흐름 제공
+        </div>
+
+        <div class="feature f2">
+          <b>2. 예상 대기 시간</b>
+          횡단보도별 남은 시간과 대기 시간 예측
+        </div>
+
+        <div class="feature f3">
+          <b>3. 최적 경로 추천</b>
+          신호 대기 시간을 반영한 빠른 경로 제공
+        </div>
+
+        <div class="feature f4">
+          <b>4. 절약 시간 비교</b>
+          기존 경로와 추천 경로의 이동 시간 비교
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let seconds = 25;
+    let running = false;
+    let timer;
+
+    function startApp() {
+      if (running) return;
+      running = true;
+
+      timer = setInterval(() => {
+        seconds--;
+
+        if (seconds <= 0) {
+          seconds = 35;
+        }
+
+        document.getElementById("pin2Text").innerHTML =
+          seconds + "초 후<br><b>초록불</b><br>다음 신호 방향 ↑";
+
+        document.getElementById("pin3Text").innerHTML =
+          (seconds + 10) + "초 후<br><b>초록불</b><br>꺾은길 방향 →";
+
+        let saved = Math.max(1, Math.floor(seconds / 8));
+        document.getElementById("savingText").innerText =
+          "대기 시간 " + saved + "분 절약 🪽";
+      }, 1000);
+    }
+
+    function toggleFeature() {
+      const card = document.getElementById("featureCard");
+      card.classList.toggle("hidden");
+    }
+  </script>
+</body>
+</html>
